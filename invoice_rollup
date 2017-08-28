@@ -1,0 +1,97 @@
+/**
+ * @NApiVersion 2.x
+ * @NScriptType ClientScript
+ * @NModuleScope SameAccount
+ * @author oalladina
+ */
+
+define(['N/record'],
+
+function (record) {
+    //object of order types
+    var orderTypes = {
+            1 : 'Annual Subscription to Definitive Healthcare Provider Database',
+            2 : 'Annual Subscription to Definitive Healthcare Provider Database - Renewal',
+            3 : 'Contract Upsell - Definitive Healthcare Provider Database - Additional Data Access',
+            4 : 'Annual Subscription to Definitive Healthcare Provider Database'
+        };
+    var invoiceDescription = 'custbody_dhc_invoice_description';
+    var invoiceMinDate = 'custbody_dhc_min_start';
+    var invoiceMaxDate = 'custbody_dhc_max_end';
+    
+    try {
+        //pageInit
+        function setInvoiceDescription(context) {
+            
+            var invoice = context.currentRecord; 
+            var fieldId = context.fieldId;
+            var relatedContract = invoice.getValue({
+                fieldId: 'custbody_contract_name'
+            });
+            var orderType = invoice.getValue({
+                fieldId: 'custbody_order_type'
+            });
+            //set invoice description based on the order type
+            invoice.setText({
+                fieldId: invoiceDescription,
+                text: orderTypes[orderType],
+                ignoreFieldChange: true
+            });
+          };
+         //validateField
+        function updateOrderType(context) {
+            
+            var invoice = context.currentRecord; 
+            var field = context.fieldId;
+            //get related contract id from record
+            var relatedContract = invoice.getValue({
+                fieldId: 'custbody_contract_name'
+            });
+            var orderType = invoice.getValue({
+                fieldId: 'custbody_order_type'
+            });
+            //check to see if the field context is related Contract and that after 'tabbing out' that the field is not blank
+            if (field === 'custbody_contract_name' && relatedContract != '' ) {
+                
+                try {
+                    //load related contract
+                    var contract = record.load({
+                        type: 'customrecord_contracts',
+                        id: relatedContract
+                    });
+                    var contractId = contract.getValue({
+                        fieldId: 'recordid'
+                    });
+                    //set invoice order type to 3
+                    invoice.setValue({
+                        fieldId: 'custbody_order_type',
+                        value: 3,
+                        ignoreFieldChange: true
+                    })                 
+                    //set invoice description to  'Contract Upsell - Definitive Healthcare Provider Database - Additional Data Access'
+                    invoice.setText({
+                        fieldId: invoiceDescription,
+                        text: orderTypes[3],
+                        ignoreFieldChange: true
+                    });
+                    
+                }   catch(e) {
+                        alert(e);
+                };
+        }      
+  
+    }  
+    
+    } catch(e) {
+        log.error({
+            title: 'Error Message',
+            details: e
+        });
+    }
+  
+return {
+    pageInit : setInvoiceDescription,
+    fieldChanged : updateOrderType
+};
+    
+});
